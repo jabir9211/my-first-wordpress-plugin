@@ -1,0 +1,166 @@
+<?php
+/*
+Plugin Name: AI Assistant for Business
+Description: A personalized AI assistant plugin that gathers essential business details to act as a support executive.
+Version: 1.0
+Author: Your Name
+License: GPLv2 or later
+*/
+
+// Register the admin menu
+add_action('admin_menu', 'ai_assistant_add_admin_menu');
+
+function ai_assistant_add_admin_menu() {
+    add_menu_page(
+        'AI Assistant',
+        'AI Assistant',
+        'manage_options',
+        'ai-assistant',
+        'ai_assistant_settings_page',
+        'dashicons-smiley',
+        100
+    );
+
+    add_submenu_page(
+        'ai-assistant',
+        'Business Info',
+        'Details',
+        'manage_options',
+        'ai-assistant-details',
+        'ai_assistant_settings_page'
+    );
+}
+
+// Register settings
+add_action('admin_init', 'ai_assistant_settings_init');
+
+function ai_assistant_settings_init() {
+    register_setting('ai_assistant_options', 'ai_assistant_data');
+}
+
+function ai_assistant_settings_page() {
+    $options = get_option('ai_assistant_data');
+    ?>
+    <div class="wrap">
+        <h1>AI Assistant Business Details</h1>
+        <form method="post" action="options.php">
+            <?php settings_fields('ai_assistant_options'); ?>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Business Name</th>
+                    <td><input type="text" name="ai_assistant_data[business_name]" value="<?php echo esc_attr($options['business_name'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Business Description</th>
+                    <td><textarea name="ai_assistant_data[description]" rows="3" class="large-text"><?php echo esc_textarea($options['description'] ?? ''); ?></textarea></td>
+                </tr>
+                <tr>
+                    <th scope="row">Main Products or Services</th>
+                    <td><input type="text" name="ai_assistant_data[products_services]" value="<?php echo esc_attr($options['products_services'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Typical Customers or Clients</th>
+                    <td><input type="text" name="ai_assistant_data[customers]" value="<?php echo esc_attr($options['customers'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Preferred Tone/Personality</th>
+                    <td><input type="text" name="ai_assistant_data[tone]" value="<?php echo esc_attr($options['tone'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Business Hours / Support Availability</th>
+                    <td><input type="text" name="ai_assistant_data[hours]" value="<?php echo esc_attr($options['hours'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Common Customer Questions</th>
+                    <td><textarea name="ai_assistant_data[common_questions]" rows="3" class="large-text"><?php echo esc_textarea($options['common_questions'] ?? ''); ?></textarea></td>
+                </tr>
+                <tr>
+                    <th scope="row">Promotions or Highlights</th>
+                    <td><input type="text" name="ai_assistant_data[promotions]" value="<?php echo esc_attr($options['promotions'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Things to Avoid Saying</th>
+                    <td><input type="text" name="ai_assistant_data[avoid]" value="<?php echo esc_attr($options['avoid'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Link to FAQ or Help Center</th>
+                    <td><input type="url" name="ai_assistant_data[faq_link]" value="<?php echo esc_url($options['faq_link'] ?? ''); ?>" class="regular-text"></td>
+                </tr>
+            </table>
+            <?php submit_button('Save Business Info'); ?>
+        </form>
+    </div>
+    <?php
+}
+function ai_assistant_generate_prompt() {
+    $options = get_option('ai_assistant_data');
+
+    if (!$options) return '';
+
+    return "You are an AI support assistant for {$options['business_name']}.\n\n" .
+        "Business Description: {$options['description']}\n" .
+        "Products/Services: {$options['products_services']}\n" .
+        "Target Customers: {$options['customers']}\n" .
+        "Tone: {$options['tone']}\n" .
+        "Business Hours: {$options['hours']}\n" .
+        "Common Questions: {$options['common_questions']}\n" .
+        "Promotions/Highlights: {$options['promotions']}\n" .
+        "Avoid Saying: {$options['avoid']}\n" .
+        "Help Center Link: {$options['faq_link']}\n\n" .
+        "Answer user questions about this business in a polite, engaging, and helpful manner.";
+}
+function ai_assistant_query_gemini($user_input) {
+    $prompt = ai_assistant_generate_prompt();
+
+    $full_prompt = $prompt . "\n\nUser Question: " . $user_input;
+
+    $api_key = 'AIzaSyBKEdKuVeW28duIieNgogUbl2iCcfcTcQI'; // Replace this securely
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=' . $api_key;
+
+    $data = [
+        "contents" => [
+            [
+                "role" => "user",
+                "parts" => [
+                    ["text" => $full_prompt]
+                ]
+            ]
+        ]
+    ];
+
+    $args = [
+        'headers' => ['Content-Type' => 'application/json'],
+        'body'    => json_encode($data),
+        'method'  => 'POST',
+        'timeout' => 20,
+    ];
+
+    $response = wp_remote_post($url, $args);
+
+    if (is_wp_error($response)) {
+        return "Error: " . $response->get_error_message();
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    return $body['candidates'][0]['content']['parts'][0]['text'] ?? 'No response from AI.';
+}
+add_shortcode('ai_assistant_chat', 'ai_assistant_chatbox');
+
+function ai_assistant_chatbox() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ai_question'])) {
+        $reply = ai_assistant_query_gemini(sanitize_text_field($_POST['ai_question']));
+    }
+
+    ob_start(); ?>
+    <form method="post">
+        <input type="text" name="ai_question" placeholder="Ask a question..." required style="width: 100%; padding: 8px;">
+        <button type="submit">Ask</button>
+    </form>
+    <?php if (!empty($reply)) : ?>
+        <div style="margin-top: 10px; background: #f1f1f1; padding: 10px;">
+            <strong>AI Response:</strong><br>
+            <?php echo esc_html($reply); ?>
+        </div>
+    <?php endif;
+    return ob_get_clean();
+}
