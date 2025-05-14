@@ -10,7 +10,8 @@ License: GPLv2 or later
 // Register the admin menu
 add_action('admin_menu', 'ai_assistant_add_admin_menu');
 
-function ai_assistant_add_admin_menu() {
+function ai_assistant_add_admin_menu()
+{
     add_menu_page(
         'AI Assistant',
         'AI Assistant',
@@ -34,13 +35,15 @@ function ai_assistant_add_admin_menu() {
 // Register settings
 add_action('admin_init', 'ai_assistant_settings_init');
 
-function ai_assistant_settings_init() {
+function ai_assistant_settings_init()
+{
     register_setting('ai_assistant_options', 'ai_assistant_data');
 }
 
-function ai_assistant_settings_page() {
+function ai_assistant_settings_page()
+{
     $options = get_option('ai_assistant_data');
-    ?>
+?>
     <div class="wrap">
         <h1>AI Assistant Business Details</h1>
         <form method="post" action="options.php">
@@ -90,9 +93,10 @@ function ai_assistant_settings_page() {
             <?php submit_button('Save Business Info'); ?>
         </form>
     </div>
-    <?php
+<?php
 }
-function ai_assistant_generate_prompt() {
+function ai_assistant_generate_prompt()
+{
     $options = get_option('ai_assistant_data');
 
     if (!$options) return '';
@@ -109,7 +113,8 @@ function ai_assistant_generate_prompt() {
         "Help Center Link: {$options['faq_link']}\n\n" .
         "Answer user questions about this business in a polite, engaging, and helpful manner.";
 }
-function ai_assistant_query_gemini($user_input) {
+function ai_assistant_query_gemini($user_input)
+{
     $prompt = ai_assistant_generate_prompt();
 
     $full_prompt = $prompt . "\n\nUser Question: " . $user_input;
@@ -146,21 +151,46 @@ function ai_assistant_query_gemini($user_input) {
 }
 add_shortcode('ai_assistant_chat', 'ai_assistant_chatbox');
 
-function ai_assistant_chatbox() {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ai_question'])) {
-        $reply = ai_assistant_query_gemini(sanitize_text_field($_POST['ai_question']));
-    }
+function ai_assistant_chatbox()
+{
+    // Enqueue scripts only when shortcode is used
+    wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], null, true);
+    wp_localize_script('ai-chat-js', 'aiChatData', [
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'start_message' => 'Hi there! 👋 I’m your assistant. How can I help you today?'
+    ]);
 
     ob_start(); ?>
-    <form method="post">
-        <input type="text" name="ai_question" placeholder="Ask a question..." required style="width: 100%; padding: 8px;">
-        <button type="submit">Ask</button>
-    </form>
-    <?php if (!empty($reply)) : ?>
-        <div style="margin-top: 10px; background: #f1f1f1; padding: 10px;">
-            <strong>AI Response:</strong><br>
-            <?php echo esc_html($reply); ?>
+    <div id="ai-chat-box" style="max-width:600px; margin:auto; font-family: Arial, sans-serif;">
+        <div id="ai-messages" style="background:#f9f9f9; padding:15px; min-height:150px; border:1px solid #ccc; border-radius:6px; overflow-y:auto; max-height:300px;"></div>
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+            <input type="text" id="ai-user-input" placeholder="Type your question..." style="flex:1; padding:10px; border:1px solid #ccc; border-radius:4px;">
+            <button id="ai-send-btn" style="padding:10px 15px; background:#0073aa; color:#fff; border:none; border-radius:4px;">Send</button>
         </div>
-    <?php endif;
-    return ob_get_clean();
+    </div>
+<?php return ob_get_clean();
+}
+
+
+// add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
+// function ai_assistant_enqueue_script() {
+//     wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], null, true);
+//     wp_localize_script('ai-chat-js', 'aiChatData', [
+//         'ajax_url' => admin_url('admin-ajax.php'),
+//         'start_message' => 'Hi there! 👋 I’m your assistant. How can I help you today?'
+//     ]);
+// }
+
+add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
+add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
+
+function ai_assistant_ajax_handler()
+{
+    if (!isset($_POST['message'])) {
+        wp_send_json_error('Missing message');
+    }
+
+    $user_input = sanitize_text_field($_POST['message']);
+    $response = ai_assistant_query_gemini($user_input);
+    wp_send_json_success($response);
 }
