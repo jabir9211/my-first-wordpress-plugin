@@ -70,6 +70,18 @@ function ai_assistant_settings_page()
                     <td><input type="text" name="ai_assistant_data[tone]" value="<?php echo esc_attr($options['tone'] ?? ''); ?>" class="regular-text"></td>
                 </tr>
                 <tr>
+                    <th scope="row">Address</th>
+                    <td>
+                        <textarea name="ai_assistant_data[address]" rows="3" class="large-text" placeholder="123 Main Street, City, Country"><?php echo esc_textarea($options['address'] ?? ''); ?></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Contact Details</th>
+                    <td>
+                        <input type="text" name="ai_assistant_data[contact_details]" value="<?php echo esc_attr($options['contact_details'] ?? ''); ?>" class="regular-text" placeholder="Phone, Email, Address">
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row">Business Hours / Support Availability</th>
                     <td><input type="text" name="ai_assistant_data[hours]" value="<?php echo esc_attr($options['hours'] ?? ''); ?>" class="regular-text"></td>
                 </tr>
@@ -89,6 +101,11 @@ function ai_assistant_settings_page()
                     <th scope="row">Link to FAQ or Help Center</th>
                     <td><input type="url" name="ai_assistant_data[faq_link]" value="<?php echo esc_url($options['faq_link'] ?? ''); ?>" class="regular-text"></td>
                 </tr>
+                <tr>
+                    <th scope="row">Initial Greeting Message</th>
+                    <td><input type="text" name="ai_assistant_data[initial_greeting]" value="<?php echo esc_attr($options['initial_greeting'] ?? ''); ?>" class="regular-text" placeholder="Hi there! 👋 I’m your assistant. How can I help you today?"></td>
+                </tr>
+
             </table>
             <?php submit_button('Save Business Info'); ?>
         </form>
@@ -111,6 +128,8 @@ function ai_assistant_generate_prompt()
         "Promotions/Highlights: {$options['promotions']}\n" .
         "Avoid Saying: {$options['avoid']}\n" .
         "Help Center Link: {$options['faq_link']}\n\n" .
+        "Address: {$options['address']}\n" .
+        "Contact Details: {$options['contact_details']}\n\n" .
         "Answer user questions about this business in a polite, engaging, and helpful manner.";
 }
 function ai_assistant_query_gemini($user_input)
@@ -154,10 +173,11 @@ add_shortcode('ai_assistant_chat', 'ai_assistant_chatbox');
 function ai_assistant_chatbox()
 {
     // Enqueue scripts only when shortcode is used
-    wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], null, true);
+    $options = get_option('ai_assistant_data');
+    wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], time(), true);
     wp_localize_script('ai-chat-js', 'aiChatData', [
         'ajax_url' => admin_url('admin-ajax.php'),
-        'start_message' => 'Hi there! 👋 I’m your assistant. How can I help you today?'
+        'start_message' => $options['initial_greeting'] ?? 'Hi there! 👋 I’m your assistant. How can I help you today?'
     ]);
 
     ob_start(); ?>
