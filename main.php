@@ -30,6 +30,15 @@ function ai_assistant_add_admin_menu()
         'ai-assistant-details',
         'ai_assistant_settings_page'
     );
+
+    add_submenu_page(
+        'ai-assistant',
+        'Integration Settings',
+        'Integration',
+        'manage_options',
+        'ai-assistant-integration',
+        'ai_assistant_integration_page'
+    );
 }
 
 // Register settings
@@ -38,6 +47,7 @@ add_action('admin_init', 'ai_assistant_settings_init');
 function ai_assistant_settings_init()
 {
     register_setting('ai_assistant_options', 'ai_assistant_data');
+    register_setting('ai_assistant_api_options', 'ai_assistant_api_key');
 }
 
 function ai_assistant_settings_page()
@@ -112,6 +122,45 @@ function ai_assistant_settings_page()
     </div>
 <?php
 }
+
+function ai_assistant_integration_page()
+{
+    $api_key = get_option('ai_assistant_api_key');
+?>
+    <div class="wrap">
+        <h1>API Integration</h1>
+        <form method="post" action="options.php" style="max-width: 600px; margin-top: 20px;">
+            <?php
+            settings_fields('ai_assistant_api_options');
+            do_settings_sections('ai_assistant_api_options');
+            ?>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Gemini API Key</th>
+                    <td>
+                        <input type="text" name="ai_assistant_api_key" value="<?php echo esc_attr($api_key); ?>" class="regular-text" placeholder="Enter your Gemini API Key">
+                        <p class="description">Your API key is securely stored in the WordPress database.</p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Save API Key'); ?>
+        </form>
+
+        <div style="margin-top: 40px; background: #fff; padding: 20px; border-left: 4px solid #0073aa;">
+            <h2>🔑 How to Get Your Gemini API Key</h2>
+            <ol style="line-height: 1.7;">
+                <li>Go to the official <a href="https://aistudio.google.com/app/apikey" target="_blank">Gemini API Console</a>.</li>
+                <li>Sign in with your Google account.</li>
+                <li>Click <strong>“Create API Key”</strong>.</li>
+                <li>Copy the generated API key.</li>
+                <li>Paste it into the field above and click <strong>Save API Key</strong>.</li>
+            </ol>
+            <p style="color: #555;">Never share your API key publicly. Keep it confidential.</p>
+        </div>
+    </div>
+<?php
+}
+
 function ai_assistant_generate_prompt()
 {
     $options = get_option('ai_assistant_data');
@@ -138,7 +187,11 @@ function ai_assistant_query_gemini($user_input)
 
     $full_prompt = $prompt . "\n\nUser Question: " . $user_input;
 
-    $api_key = 'AIzaSyBKEdKuVeW28duIieNgogUbl2iCcfcTcQI'; // Replace this securely
+    $api_key = get_option('ai_assistant_api_key');
+    if (!$api_key) {
+        return "API key is not set. Please go to the Integration page to add your Gemini API key.";
+    }
+
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=' . $api_key;
 
     $data = [
