@@ -10,8 +10,7 @@ License: GPLv2 or later
 // Register the admin menu
 add_action('admin_menu', 'ai_assistant_add_admin_menu');
 
-function ai_assistant_add_admin_menu()
-{
+function ai_assistant_add_admin_menu() {
     add_menu_page(
         'AI Assistant',
         'AI Assistant',
@@ -32,28 +31,28 @@ function ai_assistant_add_admin_menu()
     );
 
     add_submenu_page(
-        'ai-assistant',
-        'Integration Settings',
-        'Integration',
-        'manage_options',
-        'ai-assistant-integration',
-        'ai_assistant_integration_page'
-    );
+    'ai-assistant',
+    'Integration Settings',
+    'Integration',
+    'manage_options',
+    'ai-assistant-integration',
+    'ai_assistant_integration_page'
+);
+
 }
 
 // Register settings
 add_action('admin_init', 'ai_assistant_settings_init');
 
-function ai_assistant_settings_init()
-{
+function ai_assistant_settings_init() {
     register_setting('ai_assistant_options', 'ai_assistant_data');
     register_setting('ai_assistant_api_options', 'ai_assistant_api_key');
+
 }
 
-function ai_assistant_settings_page()
-{
+function ai_assistant_settings_page() {
     $options = get_option('ai_assistant_data');
-?>
+    ?>
     <div class="wrap">
         <h1>AI Assistant Business Details</h1>
         <form method="post" action="options.php">
@@ -79,7 +78,7 @@ function ai_assistant_settings_page()
                     <th scope="row">Preferred Tone/Personality</th>
                     <td><input type="text" name="ai_assistant_data[tone]" value="<?php echo esc_attr($options['tone'] ?? ''); ?>" class="regular-text"></td>
                 </tr>
-                <tr>
+               <tr>
                     <th scope="row">Address</th>
                     <td>
                         <textarea name="ai_assistant_data[address]" rows="3" class="large-text" placeholder="123 Main Street, City, Country"><?php echo esc_textarea($options['address'] ?? ''); ?></textarea>
@@ -120,13 +119,12 @@ function ai_assistant_settings_page()
             <?php submit_button('Save Business Info'); ?>
         </form>
     </div>
-<?php
+    <?php
 }
 
-function ai_assistant_integration_page()
-{
+function ai_assistant_integration_page() {
     $api_key = get_option('ai_assistant_api_key');
-?>
+    ?>
     <div class="wrap">
         <h1>API Integration</h1>
         <form method="post" action="options.php" style="max-width: 600px; margin-top: 20px;">
@@ -158,11 +156,10 @@ function ai_assistant_integration_page()
             <p style="color: #555;">Never share your API key publicly. Keep it confidential.</p>
         </div>
     </div>
-<?php
+    <?php
 }
 
-function ai_assistant_generate_prompt()
-{
+function ai_assistant_generate_prompt() {
     $options = get_option('ai_assistant_data');
 
     if (!$options) return '';
@@ -178,11 +175,10 @@ function ai_assistant_generate_prompt()
         "Avoid Saying: {$options['avoid']}\n" .
         "Help Center Link: {$options['faq_link']}\n\n" .
         "Address: {$options['address']}\n" .
-        "Contact Details: {$options['contact_details']}\n\n" .
+        "Contact Details: {$options['contact_details']}\n\n".
         "Answer user questions about this business in a polite, engaging, and helpful manner.";
 }
-function ai_assistant_query_gemini($user_input)
-{
+function ai_assistant_query_gemini($user_input) {
     $prompt = ai_assistant_generate_prompt();
 
     $full_prompt = $prompt . "\n\nUser Question: " . $user_input;
@@ -223,10 +219,10 @@ function ai_assistant_query_gemini($user_input)
 }
 add_shortcode('ai_assistant_chat', 'ai_assistant_chatbox');
 
-function ai_assistant_chatbox()
-{
+function ai_assistant_chatbox() {
     // Enqueue scripts only when shortcode is used
     $options = get_option('ai_assistant_data');
+        
     wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], time(), true);
     wp_localize_script('ai-chat-js', 'aiChatData', [
         'ajax_url' => admin_url('admin-ajax.php'),
@@ -241,24 +237,20 @@ function ai_assistant_chatbox()
             <button id="ai-send-btn" style="padding:10px 15px; background:#0073aa; color:#fff; border:none; border-radius:4px;">Send</button>
         </div>
     </div>
-<?php return ob_get_clean();
+    <?php return ob_get_clean();
 }
 
 
-// add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
-// function ai_assistant_enqueue_script() {
-//     wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], null, true);
-//     wp_localize_script('ai-chat-js', 'aiChatData', [
-//         'ajax_url' => admin_url('admin-ajax.php'),
-//         'start_message' => 'Hi there! 👋 I’m your assistant. How can I help you today?'
-//     ]);
-// }
+add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
+function ai_assistant_enqueue_script() {
+   wp_enqueue_script('jquery'); // Make sure jQuery is loaded
+     wp_enqueue_style('ai-chat-style', plugin_dir_url(__FILE__) . 'css/ai-chat.css');
+ }
 
 add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
 add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
 
-function ai_assistant_ajax_handler()
-{
+function ai_assistant_ajax_handler() {
     if (!isset($_POST['message'])) {
         wp_send_json_error('Missing message');
     }
@@ -266,4 +258,61 @@ function ai_assistant_ajax_handler()
     $user_input = sanitize_text_field($_POST['message']);
     $response = ai_assistant_query_gemini($user_input);
     wp_send_json_success($response);
+}
+add_action('wp_footer', 'ai_assistant_chat_ui');
+function ai_assistant_chat_ui() {
+    ?>
+    <div id="ai-chat-launcher" style="position:fixed; bottom:20px; right:20px; background:#0073aa; color:#fff; border-radius:50%; width:60px; height:60px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:9999;">
+        💬
+    </div>
+    
+    <div id="ai-chat-widget" style="display:none; position:fixed; bottom:90px; right:20px; width:350px; max-height:500px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.2); z-index:9999;">
+        <div style="background:#0073aa; color:#fff; padding:12px; font-size:16px; border-top-left-radius:8px; border-top-right-radius:8px;">
+            AI Support Assistant
+            <span id="ai-chat-close" style="float:right; cursor:pointer;">&times;</span>
+        </div>
+        <div id="ai-chat-messages" style="padding:10px; height:300px; overflow-y:auto; font-size:14px;"></div>
+        <div style="padding:10px; border-top:1px solid #ccc;">
+            <input type="text" id="ai-chat-input" placeholder="Type your message..." style="width:80%; padding:8px;">
+            <button id="ai-chat-send" style="padding:8px;">Send</button>
+        </div>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+    $('#ai-chat-launcher').on('click', function() {
+        $('#ai-chat-widget').slideToggle();
+        if ($('#ai-chat-messages').children().length === 0) {
+            $('#ai-chat-messages').append('<div style="margin-bottom:10px;"><strong>Assistant:</strong> ' + aiChatData.start_message + '</div>');
+        }
+    });
+
+    $('#ai-chat-close').on('click', function() {
+        $('#ai-chat-widget').slideUp();
+    });
+
+    $('#ai-chat-send').on('click', function() {
+        let message = $('#ai-chat-input').val().trim();
+        if (message) {
+            $('#ai-chat-messages').append('<div style="margin-bottom:10px; text-align:right;"><strong>You:</strong> ' + message + '</div>');
+            $('#ai-chat-input').val('');
+            
+            // Dummy AJAX placeholder (replace later with real API call)
+            $.post(aiChatData.ajax_url, {
+                action: 'ai_assistant_send',
+                message: message
+            }, function(response) {
+                if (response.success) {
+                    $('#ai-chat-messages').append('<div style="margin-bottom:10px;"><strong>Assistant:</strong> ' + response.data + '</div>');
+                } else {
+                    $('#ai-chat-messages').append('<div style="margin-bottom:10px;"><strong>Assistant:</strong> Sorry, something went wrong.</div>');
+                }
+                $('#ai-chat-messages').scrollTop($('#ai-chat-messages')[0].scrollHeight);
+            });
+        }
+    });
+});
+
+
+    </script>
+    <?php
 }

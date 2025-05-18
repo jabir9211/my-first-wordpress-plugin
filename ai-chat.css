@@ -1,0 +1,8 @@
+#ai-chat-widget input, #ai-chat-widget button {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+#ai-chat-widget button {
+    background-color: #0073aa;
+    color: white;
+}
