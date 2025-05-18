@@ -227,6 +227,7 @@ function ai_assistant_chatbox()
 {
     // Enqueue scripts only when shortcode is used
     $options = get_option('ai_assistant_data');
+
     wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], time(), true);
     wp_localize_script('ai-chat-js', 'aiChatData', [
         'ajax_url' => admin_url('admin-ajax.php'),
@@ -245,14 +246,13 @@ function ai_assistant_chatbox()
 }
 
 
-// add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
-// function ai_assistant_enqueue_script() {
-//     wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], null, true);
-//     wp_localize_script('ai-chat-js', 'aiChatData', [
-//         'ajax_url' => admin_url('admin-ajax.php'),
-//         'start_message' => 'Hi there! 👋 I’m your assistant. How can I help you today?'
-//     ]);
-// }
+add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
+function ai_assistant_enqueue_script()
+{
+    wp_enqueue_script('jquery');
+    wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+    wp_enqueue_style('ai-chat-style', plugin_dir_url(__FILE__) . 'css/ai-chat.css');
+}
 
 add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
 add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
@@ -262,8 +262,85 @@ function ai_assistant_ajax_handler()
     if (!isset($_POST['message'])) {
         wp_send_json_error('Missing message');
     }
-
     $user_input = sanitize_text_field($_POST['message']);
-    $response = ai_assistant_query_gemini($user_input);
+    $response = "This is a test response from assistant."; // Dummy response
     wp_send_json_success($response);
+}
+
+add_action('wp_footer', 'ai_assistant_chat_ui');
+function ai_assistant_chat_ui()
+{
+?>
+    <div id="ai-chat-launcher" class="ai-launcher">
+        <i class="fa fa-comments"></i>
+    </div>
+
+    <div id="ai-chat-widget" class="ai-widget">
+        <div class="ai-header">
+            <span>AI Support Assistant</span>
+            <span id="ai-chat-close">&times;</span>
+        </div>
+        <div id="ai-chat-messages" class="ai-messages"></div>
+        <div class="ai-input-area">
+            <input type="text" id="ai-chat-input" placeholder="Type your message..." />
+            <button id="ai-chat-send"><i class="fa fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        var aiChatData = {
+            ajax_url: '<?php echo admin_url("admin-ajax.php"); ?>',
+            start_message: 'Hi there! 👋 How can I help you today?'
+        };
+
+        jQuery(document).ready(function($) {
+            function updateLauncherIcon() {
+                let launcherIcon = $('#ai-chat-launcher i');
+                if ($('#ai-chat-widget').is(':visible')) {
+                    launcherIcon.removeClass('fa-comments').addClass('fa-times');
+                } else {
+                    launcherIcon.removeClass('fa-times').addClass('fa-comments');
+                }
+            }
+
+            // Initial icon setup in case chat is pre-opened
+            updateLauncherIcon();
+
+            $('#ai-chat-launcher').on('click', function() {
+                $('#ai-chat-widget').slideToggle(() => {
+                    updateLauncherIcon();
+
+                    // Show welcome message only once
+                    if ($('#ai-chat-messages').children().length === 0) {
+                        $('#ai-chat-messages').append('<div class="assistant">' + aiChatData.start_message + '</div>');
+                    }
+                });
+            });
+
+            $('#ai-chat-close').on('click', function() {
+                $('#ai-chat-widget').slideUp(updateLauncherIcon);
+            });
+
+            $('#ai-chat-send').on('click', function() {
+                let message = $('#ai-chat-input').val().trim();
+                if (message) {
+                    $('#ai-chat-messages').append('<div class="user">' + message + '</div>');
+                    $('#ai-chat-input').val('');
+
+                    $.post(aiChatData.ajax_url, {
+                        action: 'ai_assistant_send',
+                        message: message
+                    }, function(response) {
+                        if (response.success) {
+                            $('#ai-chat-messages').append('<div class="assistant">' + response.data + '</div>');
+                        } else {
+                            $('#ai-chat-messages').append('<div class="assistant">Sorry, something went wrong.</div>');
+                        }
+                        $('#ai-chat-messages').scrollTop($('#ai-chat-messages')[0].scrollHeight);
+                    });
+                }
+            });
+        });
+    </script>
+<?php
 }
