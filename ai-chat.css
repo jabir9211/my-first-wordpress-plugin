@@ -68,11 +68,41 @@
     word-wrap: break-word;
 }
 
-.ai-messages .user {
+/* .ai-messages .user {
     background: #dcf8c6;
     align-self: flex-end;
     text-align: right;
     margin-left: auto;
+} */
+.ai-messages .user,
+.ai-messages .assistant {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ai-messages .user {
+    flex-direction: row-reverse;
+    text-align: right;
+}
+
+.ai-messages .assistant img,
+.ai-messages .user img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.ai-messages .user .bubble,
+.ai-messages .assistant .bubble {
+    background: #eee;
+    padding: 10px 14px;
+    border-radius: 10px;
+    max-width: 75%;
+}
+
+.ai-messages .user .bubble {
+    background: #dcf8c6;
 }
 
 .ai-messages .assistant {
