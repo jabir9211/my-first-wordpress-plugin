@@ -14,6 +14,7 @@ jQuery(document).ready(function($) {
         $('#ai-chat-widget').slideToggle(() => {
             updateLauncherIcon();
 
+            // If no messages yet, show the initial greeting message
             if ($('#ai-chat-messages').children().length === 0) {
                 $('#ai-chat-messages').append(`
                     <div class="assistant">
@@ -30,30 +31,52 @@ jQuery(document).ready(function($) {
         $('#ai-chat-widget').slideUp(updateLauncherIcon);
     });
 
+    // Function to append a loading indicator while waiting for a response
+    function showLoadingIndicator() {
+        $('#ai-chat-messages').append(`
+            <div class="assistant loading">
+                <img src="https://cdn-icons-png.flaticon.com/512/4712/4712038.png" alt="Bot">
+                <div class="bubble">...</div>
+            </div>
+        `);
+    }
+
+    // Function to append the message (user or assistant)
+    function appendMessage(sender, message) {
+        $('#ai-chat-messages').append(`
+            <div class="${sender}">
+                <img src="https://cdn-icons-png.flaticon.com/512/1077/1077012.png" alt="${sender === 'user' ? 'You' : 'Support Executive'}">
+                <div class="bubble">${message}</div>
+            </div>
+        `);
+    }
+
     // Send message
     function sendUserMessage() {
         let message = $('#ai-chat-input').val().trim();
         if (!message) return;
 
-        $('#ai-chat-messages').append(`
-            <div class="user">
-                <img src="https://cdn-icons-png.flaticon.com/512/1077/1077012.png" alt="You">
-                <div class="bubble">${message}</div>
-            </div>
-        `);
+        // Append the user's message to the chat
+        appendMessage('user', message);
         $('#ai-chat-input').val('');
 
+        // Show loading indicator for assistant's response
+        showLoadingIndicator();
+
+        // Send message to the server (PHP) for processing
         $.post(aiChatData.ajax_url, {
             action: 'ai_assistant_send',
             message: message
         }, function(response) {
+            // Remove the loading indicator
+            $('.assistant.loading').remove();
+
             let reply = response.success ? response.data : 'Sorry, something went wrong.';
-            $('#ai-chat-messages').append(`
-                <div class="assistant">
-                    <img src="https://cdn-icons-png.flaticon.com/512/4712/4712038.png" alt="Bot">
-                    <div class="bubble">${reply}</div>
-                </div>
-            `);
+
+            // Append the assistant's reply (support executive) to the chat
+            appendMessage('assistant', reply);
+
+            // Scroll the chat to the bottom
             $('#ai-chat-messages').scrollTop($('#ai-chat-messages')[0].scrollHeight);
         });
     }
@@ -76,6 +99,7 @@ jQuery(window).on('load', function() {
             $('#ai-chat-widget').slideDown(() => {
                 updateLauncherIcon();
 
+                // If no messages yet, show the initial greeting message
                 if ($('#ai-chat-messages').children().length === 0) {
                     $('#ai-chat-messages').append(`
                         <div class="assistant">
