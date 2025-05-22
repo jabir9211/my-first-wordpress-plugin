@@ -167,19 +167,47 @@ function ai_assistant_generate_prompt()
 
     if (!$options) return '';
 
-    return "You are an AI support assistant for {$options['business_name']}.\n\n" .
-        "Business Description: {$options['description']}\n" .
-        "Products/Services: {$options['products_services']}\n" .
-        "Target Customers: {$options['customers']}\n" .
-        "Tone: {$options['tone']}\n" .
-        "Business Hours: {$options['hours']}\n" .
-        "Common Questions: {$options['common_questions']}\n" .
-        "Promotions/Highlights: {$options['promotions']}\n" .
-        "Avoid Saying: {$options['avoid']}\n" .
-        "Help Center Link: {$options['faq_link']}\n\n" .
-        "Address: {$options['address']}\n" .
-        "Contact Details: {$options['contact_details']}\n\n" .
-        "Answer user questions about this business in a polite, engaging, and helpful manner.";
+    return "You are an award-winning support assistant known for delivering helpful, clear, and easy-to-understand responses—even when questions are vague or confusing. You have a light, professional tone with a touch of friendly charm, but you always stick to the point. Your answers are well-formatted, direct, and structured to help users quickly get what they need without extra fluff.
+
+            You are now the support assistant for {$options['business_name']}.
+
+            Use the following information to guide your replies:
+
+            Business Description: {$options['description']}
+
+            Products/Services: {$options['products_services']}
+
+            Target Customers: {$options['customers']}
+
+            Tone: {$options['tone']}
+
+            Business Hours: {$options['hours']}
+
+            Common Questions: {$options['common_questions']}
+
+            Promotions/Highlights: {$options['promotions']}
+
+            Avoid Saying: {$options['avoid']}
+
+            Help Center Link: {$options['faq_link']}
+
+            Address: {$options['address']}
+
+            Contact Details: {$options['contact_details']}
+
+            Instructions:
+
+            Stick to the point while keeping responses friendly and readable.
+
+            Use simple formatting (bullet points, bolding) to highlight important details.
+
+            Avoid unnecessary greetings or filler words unless appropriate.
+
+            Always check the user’s previous questions to maintain smooth conversation flow.
+
+            Respond as if speaking to someone unfamiliar with the business or industry.
+
+            ";
 }
 function ai_assistant_query_gemini($user_input)
 {
@@ -221,30 +249,6 @@ function ai_assistant_query_gemini($user_input)
     $body = json_decode(wp_remote_retrieve_body($response), true);
     return $body['candidates'][0]['content']['parts'][0]['text'] ?? 'No response from AI.';
 }
-add_shortcode('ai_assistant_chat', 'ai_assistant_chatbox');
-
-function ai_assistant_chatbox()
-{
-    // Enqueue scripts only when shortcode is used
-    $options = get_option('ai_assistant_data');
-
-    wp_enqueue_script('ai-chat-js', plugin_dir_url(__FILE__) . 'js/chat.js', ['jquery'], time(), true);
-    wp_localize_script('ai-chat-js', 'aiChatData', [
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'start_message' => $options['initial_greeting'] ?? 'Hi there! 👋 I’m your assistant. How can I help you today?'
-    ]);
-
-    ob_start(); ?>
-    <div id="ai-chat-box" style="max-width:600px; margin:auto; font-family: Arial, sans-serif;">
-        <div id="ai-messages" style="background:#f9f9f9; padding:15px; min-height:150px; border:1px solid #ccc; border-radius:6px; overflow-y:auto; max-height:300px;"></div>
-        <div style="margin-top: 10px; display: flex; gap: 10px;">
-            <input type="text" id="ai-user-input" placeholder="Type your question..." style="flex:1; padding:10px; border:1px solid #ccc; border-radius:4px;">
-            <button id="ai-send-btn" style="padding:10px 15px; background:#0073aa; color:#fff; border:none; border-radius:4px;">Send</button>
-        </div>
-    </div>
-<?php return ob_get_clean();
-}
-
 add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
 add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
 
@@ -264,8 +268,14 @@ function ai_assistant_ajax_handler()
         wp_send_json_error('Something went wrong with the AI response');
     }
 }
-
-
+add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
+function ai_assistant_enqueue_script()
+{
+    wp_enqueue_script('jquery');
+    wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+    wp_enqueue_style('ai-chat-style', plugin_dir_url(__FILE__) . 'css/ai-chat.css');
+    wp_enqueue_script('chat-front-js', plugin_dir_url(__FILE__) . 'js/chat-fornt.js', ['jquery'], time(), true);
+}
 
 add_action('wp_footer', 'ai_assistant_chat_ui');
 function ai_assistant_chat_ui()
@@ -296,13 +306,4 @@ function ai_assistant_chat_ui()
         };
     </script>
 <?php
-}
-
-add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
-function ai_assistant_enqueue_script()
-{
-    wp_enqueue_script('jquery');
-    wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-    wp_enqueue_style('ai-chat-style', plugin_dir_url(__FILE__) . 'css/ai-chat.css');
-    wp_enqueue_script('chat-front-js', plugin_dir_url(__FILE__) . 'js/chat-fornt.js', ['jquery'], time(), true);
 }
