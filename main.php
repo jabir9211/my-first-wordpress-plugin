@@ -161,77 +161,75 @@ function ai_assistant_integration_page()
 <?php
 }
 
+// Start session safely
+add_action('init', function () {
+    if (!session_id()) {
+        session_start();
+    }
+});
+
+// Generate system prompt with business data
 function ai_assistant_generate_prompt()
 {
     $options = get_option('ai_assistant_data');
-
     if (!$options) return '';
 
-    return "You are an award-winning support assistant known for delivering helpful, clear, and easy-to-understand responses—even when questions are vague or confusing. You have a light, professional tone with a touch of friendly charm, but you always stick to the point. Your answers are well-formatted, direct, and structured to help users quickly get what they need without extra fluff.
+    return "Imagine You are an award-winning support assistant known for delivering helpful, clear, and easy-to-understand responses—even when questions are vague or confusing. You have a light, professional tone with a touch of friendly charm, but you always stick to the point. Your answers are well-formatted, direct, and structured to help users quickly get what they need without extra fluff.
 
-            You are now the support assistant for {$options['business_name']}.
+    You are now the support assistant for {$options['business_name']}.
 
-            Use the following information to guide your replies:
+    Use the following information to guide your replies:
 
-            Business Description: {$options['description']}
+    Business Description: {$options['description']}
+    Products/Services: {$options['products_services']}
+    Target Customers: {$options['customers']}
+    Tone: {$options['tone']}
+    Business Hours: {$options['hours']}
+    Common Questions: {$options['common_questions']}
+    Promotions/Highlights: {$options['promotions']}
+    Avoid Saying: {$options['avoid']}
+    Help Center Link: {$options['faq_link']}
+    Address: {$options['address']}
+    Contact Details: {$options['contact_details']}
 
-            Products/Services: {$options['products_services']}
-
-            Target Customers: {$options['customers']}
-
-            Tone: {$options['tone']}
-
-            Business Hours: {$options['hours']}
-
-            Common Questions: {$options['common_questions']}
-
-            Promotions/Highlights: {$options['promotions']}
-
-            Avoid Saying: {$options['avoid']}
-
-            Help Center Link: {$options['faq_link']}
-
-            Address: {$options['address']}
-
-            Contact Details: {$options['contact_details']}
-
-            Instructions:
-
-            Stick to the point while keeping responses friendly and readable.
-
-            Use simple formatting (bullet points, bolding) to highlight important details.
-
-            Avoid unnecessary greetings or filler words unless appropriate.
-
-            Always check the user’s previous questions to maintain smooth conversation flow.
-
-            Respond as if speaking to someone unfamiliar with the business or industry.
-
-            ";
+    Instructions:
+    - Stick to the point while keeping responses friendly and readable.
+    - Use simple formatting (bullet points, bolding) to highlight important details.
+    - Avoid unnecessary greetings or filler words unless appropriate.
+    - Always check the user’s previous questions to maintain smooth conversation flow.
+    - Respond as if speaking to someone unfamiliar with the business or industry.";
 }
+
+// Call Gemini API with chat history
 function ai_assistant_query_gemini($user_input)
 {
-    $prompt = ai_assistant_generate_prompt();
-
-    $full_prompt = $prompt . "\n\nUser Question: " . $user_input;
-
     $api_key = get_option('ai_assistant_api_key');
     if (!$api_key) {
         return "API key is not set. Please go to the Integration page to add your Gemini API key.";
     }
 
-    $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=' . $api_key;
+    // Initialize conversation history
+    if (!isset($_SESSION['ai_assistant_chat'])) {
+        $_SESSION['ai_assistant_chat'] = [];
+
+        // Add system prompt as initial instruction
+        $_SESSION['ai_assistant_chat'][] = [
+            'role' => 'user',
+            'parts' => [['text' => ai_assistant_generate_prompt()]]
+        ];
+    }
+
+    // Add new user message
+    $_SESSION['ai_assistant_chat'][] = [
+        'role' => 'user',
+        'parts' => [['text' => $user_input]]
+    ];
 
     $data = [
-        "contents" => [
-            [
-                "role" => "user",
-                "parts" => [
-                    ["text" => $full_prompt]
-                ]
-            ]
-        ]
+        "contents" => $_SESSION['ai_assistant_chat']
     ];
+
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=' . $api_key;
 
     $args = [
         'headers' => ['Content-Type' => 'application/json'],
@@ -247,8 +245,18 @@ function ai_assistant_query_gemini($user_input)
     }
 
     $body = json_decode(wp_remote_retrieve_body($response), true);
-    return $body['candidates'][0]['content']['parts'][0]['text'] ?? 'No response from AI.';
+    $reply = $body['candidates'][0]['content']['parts'][0]['text'] ?? 'No response from AI.';
+
+    // Save model reply to history
+    $_SESSION['ai_assistant_chat'][] = [
+        'role' => 'model',
+        'parts' => [['text' => $reply]]
+    ];
+
+    return $reply;
 }
+
+// AJAX hooks
 add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
 add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
 
@@ -259,15 +267,16 @@ function ai_assistant_ajax_handler()
     }
 
     $user_input = sanitize_text_field($_POST['message']);
-    // Call the function that interacts with Gemini API
     $assistant_response = ai_assistant_query_gemini($user_input);
 
     if ($assistant_response) {
         wp_send_json_success($assistant_response);
     } else {
-        wp_send_json_error('Something went wrong with the AI response');
+        wp_send_json_error('AI failed to respond');
     }
 }
+
+
 add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
 function ai_assistant_enqueue_script()
 {
