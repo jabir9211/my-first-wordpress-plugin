@@ -10,8 +10,7 @@ License: GPLv2 or later
 // Register the admin menu
 add_action('admin_menu', 'ai_assistant_add_admin_menu');
 
-function ai_assistant_add_admin_menu()
-{
+function ai_assistant_add_admin_menu() {
     add_menu_page(
         'AI Assistant',
         'AI Assistant',
@@ -32,28 +31,28 @@ function ai_assistant_add_admin_menu()
     );
 
     add_submenu_page(
-        'ai-assistant',
-        'Integration Settings',
-        'Integration',
-        'manage_options',
-        'ai-assistant-integration',
-        'ai_assistant_integration_page'
-    );
+    'ai-assistant',
+    'Integration Settings',
+    'Integration',
+    'manage_options',
+    'ai-assistant-integration',
+    'ai_assistant_integration_page'
+);
+
 }
 
 // Register settings
 add_action('admin_init', 'ai_assistant_settings_init');
 
-function ai_assistant_settings_init()
-{
+function ai_assistant_settings_init() {
     register_setting('ai_assistant_options', 'ai_assistant_data');
     register_setting('ai_assistant_api_options', 'ai_assistant_api_key');
+
 }
 
-function ai_assistant_settings_page()
-{
+function ai_assistant_settings_page() {
     $options = get_option('ai_assistant_data');
-?>
+    ?>
     <div class="wrap">
         <h1>AI Assistant Business Details</h1>
         <form method="post" action="options.php">
@@ -79,7 +78,7 @@ function ai_assistant_settings_page()
                     <th scope="row">Preferred Tone/Personality</th>
                     <td><input type="text" name="ai_assistant_data[tone]" value="<?php echo esc_attr($options['tone'] ?? ''); ?>" class="regular-text"></td>
                 </tr>
-                <tr>
+               <tr>
                     <th scope="row">Address</th>
                     <td>
                         <textarea name="ai_assistant_data[address]" rows="3" class="large-text" placeholder="123 Main Street, City, Country"><?php echo esc_textarea($options['address'] ?? ''); ?></textarea>
@@ -120,13 +119,12 @@ function ai_assistant_settings_page()
             <?php submit_button('Save Business Info'); ?>
         </form>
     </div>
-<?php
+    <?php
 }
 
-function ai_assistant_integration_page()
-{
+function ai_assistant_integration_page() {
     $api_key = get_option('ai_assistant_api_key');
-?>
+    ?>
     <div class="wrap">
         <h1>API Integration</h1>
         <form method="post" action="options.php" style="max-width: 600px; margin-top: 20px;">
@@ -158,7 +156,7 @@ function ai_assistant_integration_page()
             <p style="color: #555;">Never share your API key publicly. Keep it confidential.</p>
         </div>
     </div>
-<?php
+    <?php
 }
 
 // Start session safely
@@ -169,8 +167,7 @@ add_action('init', function () {
 });
 
 // Generate system prompt with business data
-function ai_assistant_generate_prompt()
-{
+function ai_assistant_generate_prompt() {
     $options = get_option('ai_assistant_data');
     if (!$options) return '';
 
@@ -201,8 +198,7 @@ function ai_assistant_generate_prompt()
 }
 
 // Call Gemini API with chat history
-function ai_assistant_query_gemini($user_input)
-{
+function ai_assistant_query_gemini($user_input) {
     $api_key = get_option('ai_assistant_api_key');
     if (!$api_key) {
         return "API key is not set. Please go to the Integration page to add your Gemini API key.";
@@ -260,8 +256,7 @@ function ai_assistant_query_gemini($user_input)
 add_action('wp_ajax_nopriv_ai_assistant_send', 'ai_assistant_ajax_handler');
 add_action('wp_ajax_ai_assistant_send', 'ai_assistant_ajax_handler');
 
-function ai_assistant_ajax_handler()
-{
+function ai_assistant_ajax_handler() {
     if (!isset($_POST['message'])) {
         wp_send_json_error('Missing message');
     }
@@ -278,41 +273,74 @@ function ai_assistant_ajax_handler()
 
 
 add_action('wp_enqueue_scripts', 'ai_assistant_enqueue_script');
-function ai_assistant_enqueue_script()
-{
+function ai_assistant_enqueue_script() {
     wp_enqueue_script('jquery');
     wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
     wp_enqueue_style('ai-chat-style', plugin_dir_url(__FILE__) . 'css/ai-chat.css');
     wp_enqueue_script('chat-front-js', plugin_dir_url(__FILE__) . 'js/chat-fornt.js', ['jquery'], time(), true);
 }
 
+function ai_assistant_get_accent_color() {
+    $options = get_option('ai_assistant_data');
+    return $options['accent_color'] ?? '#3BAFDA'; // Sky Blue default
+}
+
 add_action('wp_footer', 'ai_assistant_chat_ui');
-function ai_assistant_chat_ui()
-{
+function ai_assistant_chat_ui() {
     $options = get_option('ai_assistant_data');
     $start_message = $options['initial_greeting'] ?? 'Hi there! 👋 How can I help you today?';
-?>
-    <div id="ai-chat-launcher" class="ai-launcher">
+    $accent_color = ai_assistant_get_accent_color();
+    ?>
+    <style>
+    :root {
+        --accent-color: <?php echo esc_attr($accent_color); ?>;
+        --chat-bg-light: #fff;
+        --chat-bg-dark: #1f1f1f;
+        --text-color-light: #333;
+        --text-color-dark: #f1f1f1;
+        --divider-light: #e0e0e0;
+        --divider-dark: #333;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .ai-widget,
+        .ai-header,
+        .ai-input-area,
+        .ai-messages {
+            background-color: var(--chat-bg-dark);
+            color: var(--text-color-dark);
+        }
+        .ai-messages .assistant .bubble {
+            background-color: #2c2c2c;
+            color: var(--text-color-dark);
+        }
+        .ai-messages .user .bubble {
+            color: #fff;
+        }
+    }
+    </style>
+
+    <div id="ai-chat-launcher" class="ai-launcher" aria-label="Open chat">
         <i class="fa fa-comments"></i>
     </div>
 
-    <div id="ai-chat-widget" class="ai-widget" style="display: none;">
+    <div id="ai-chat-widget" class="ai-widget" style="display: none;" role="dialog" aria-label="AI Assistant Chat">
         <div class="ai-header">
-            <span>AI Support Assistant</span>
-            <span id="ai-chat-close">&times;</span>
+            <span>AI Assistant</span>
+            <button id="ai-chat-close" aria-label="Close chat">&times;</button>
         </div>
-        <div id="ai-chat-messages" class="ai-messages"></div>
+        <div id="ai-chat-messages" class="ai-messages" role="log" aria-live="polite"></div>
         <div class="ai-input-area">
-            <input type="text" id="ai-chat-input" placeholder="Type your message..." />
-            <button id="ai-chat-send"><i class="fa fa-paper-plane"></i></button>
+            <input type="text" id="ai-chat-input" placeholder="Type your message..." aria-label="Your message" />
+            <button id="ai-chat-send" aria-label="Send message"><i class="fa fa-paper-plane"></i></button>
         </div>
     </div>
 
     <script>
-        var aiChatData = {
-            ajax_url: '<?php echo admin_url("admin-ajax.php"); ?>',
-            start_message: <?php echo json_encode($start_message); ?>
-        };
+    var aiChatData = {
+        ajax_url: '<?php echo admin_url("admin-ajax.php"); ?>',
+        start_message: <?php echo json_encode($start_message); ?>
+    };
     </script>
-<?php
+    <?php
 }

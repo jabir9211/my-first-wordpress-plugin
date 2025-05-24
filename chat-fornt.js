@@ -33,13 +33,18 @@ jQuery(document).ready(function($) {
 
     // Function to append a loading indicator while waiting for a response
     function showLoadingIndicator() {
-        $('#ai-chat-messages').append(`
-            <div class="assistant loading">
-                <img src="https://cdn-icons-png.flaticon.com/512/4712/4712038.png" alt="Bot">
-                <div class="bubble">...</div>
+    $('#ai-chat-messages').append(`
+        <div class="assistant loading">
+            <img src="https://cdn-icons-png.flaticon.com/512/4712/4712038.png" alt="Bot">
+            <div class="bubble">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
-        `);
-    }
+        </div>
+    `);
+}
+
 
     // Function to append the message (user or assistant)
     function appendMessage(sender, message) {
