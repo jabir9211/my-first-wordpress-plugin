@@ -50,7 +50,7 @@ jQuery(document).ready(function($) {
     function appendMessage(sender, message) {
         $('#ai-chat-messages').append(`
             <div class="${sender}">
-                <img src="https://cdn-icons-png.flaticon.com/512/1077/1077012.png" alt="${sender === 'user' ? 'You' : 'Support Executive'}">
+                <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="${sender === 'user' ? 'You' : 'Support Executive'}">
                 <div class="bubble">${message}</div>
             </div>
         `);

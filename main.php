@@ -285,22 +285,41 @@ function ai_assistant_get_accent_color() {
     return $options['accent_color'] ?? '#3BAFDA'; // Sky Blue default
 }
 
+function adjust_brightness($hex, $steps) {
+    $steps = max(-255, min(255, $steps));
+    $hex = str_replace('#', '', $hex);
+
+    if (strlen($hex) == 3) {
+        $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+    }
+
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+
+    $r = max(0, min(255, $r + $steps));
+    $g = max(0, min(255, $g + $steps));
+    $b = max(0, min(255, $b + $steps));
+
+    return sprintf("#%02x%02x%02x", $r, $g, $b);
+}
+
 add_action('wp_footer', 'ai_assistant_chat_ui');
+
 function ai_assistant_chat_ui() {
     $options = get_option('ai_assistant_data');
     $start_message = $options['initial_greeting'] ?? 'Hi there! 👋 How can I help you today?';
     $accent_color = ai_assistant_get_accent_color();
     ?>
     <style>
-    :root {
-        --accent-color: <?php echo esc_attr($accent_color); ?>;
-        --chat-bg-light: #fff;
-        --chat-bg-dark: #1f1f1f;
-        --text-color-light: #333;
-        --text-color-dark: #f1f1f1;
-        --divider-light: #e0e0e0;
-        --divider-dark: #333;
-    }
+   .ai-launcher {
+    background: var(--accent-color);
+}
+
+#ai-chat-send:hover {
+    background: var(--accent-hover);
+}
+
 
     @media (prefers-color-scheme: dark) {
         .ai-widget,
