@@ -285,73 +285,24 @@ function ai_assistant_get_accent_color() {
     return $options['accent_color'] ?? '#3BAFDA'; // Sky Blue default
 }
 
-function adjust_brightness($hex, $steps) {
-    $steps = max(-255, min(255, $steps));
-    $hex = str_replace('#', '', $hex);
-
-    if (strlen($hex) == 3) {
-        $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
-    }
-
-    $r = hexdec(substr($hex, 0, 2));
-    $g = hexdec(substr($hex, 2, 2));
-    $b = hexdec(substr($hex, 4, 2));
-
-    $r = max(0, min(255, $r + $steps));
-    $g = max(0, min(255, $g + $steps));
-    $b = max(0, min(255, $b + $steps));
-
-    return sprintf("#%02x%02x%02x", $r, $g, $b);
-}
-
 add_action('wp_footer', 'ai_assistant_chat_ui');
-
 function ai_assistant_chat_ui() {
     $options = get_option('ai_assistant_data');
     $start_message = $options['initial_greeting'] ?? 'Hi there! 👋 How can I help you today?';
-    $accent_color = ai_assistant_get_accent_color();
     ?>
-    <style>
-   .ai-launcher {
-    background: var(--accent-color);
-}
-
-#ai-chat-send:hover {
-    background: var(--accent-hover);
-}
-
-
-    @media (prefers-color-scheme: dark) {
-        .ai-widget,
-        .ai-header,
-        .ai-input-area,
-        .ai-messages {
-            background-color: var(--chat-bg-dark);
-            color: var(--text-color-dark);
-        }
-        .ai-messages .assistant .bubble {
-            background-color: #2c2c2c;
-            color: var(--text-color-dark);
-        }
-        .ai-messages .user .bubble {
-            color: #fff;
-        }
-    }
-    </style>
-
-    <div id="ai-chat-launcher" class="ai-launcher" aria-label="Open chat">
+    <div id="ai-chat-launcher" class="ai-launcher">
         <i class="fa fa-comments"></i>
     </div>
 
-    <div id="ai-chat-widget" class="ai-widget" style="display: none;" role="dialog" aria-label="AI Assistant Chat">
+    <div id="ai-chat-widget" class="ai-widget" style="display: none;">
         <div class="ai-header">
-            <span>AI Assistant</span>
-            <button id="ai-chat-close" aria-label="Close chat">&times;</button>
+            <span>AI Support Assistant</span>
+            <span id="ai-chat-close">&times;</span>
         </div>
-        <div id="ai-chat-messages" class="ai-messages" role="log" aria-live="polite"></div>
+        <div id="ai-chat-messages" class="ai-messages"></div>
         <div class="ai-input-area">
-            <input type="text" id="ai-chat-input" placeholder="Type your message..." aria-label="Your message" />
-            <button id="ai-chat-send" aria-label="Send message"><i class="fa fa-paper-plane"></i></button>
+            <input type="text" id="ai-chat-input" placeholder="Type your message..." />
+            <button id="ai-chat-send"><i class="fa fa-paper-plane"></i></button>
         </div>
     </div>
 
